@@ -46,8 +46,8 @@ body {
 .learning-hero {
   position: relative;
   display: flex;
-  min-height: 680px;
-  min-height: max(680px, 100svh);
+  min-height: 100vh;
+  min-height: 100svh; /* fills any screen height, so short screens don't push the credit off-screen */
   align-items: center;
   justify-content: center;
   overflow: hidden;
@@ -55,9 +55,11 @@ body {
 
 /* ---------- Globe ---------- */
 
+/* Scales with the viewport: at least 820px on wide screens, up to 1100px on large monitors,
+   and never taller than the space left between the top bar and the credit. */
 .learning-world {
   position: relative;
-  width: min(820px, 90vw, calc(100svh - 160px));
+  width: min(max(820px, 44vw), 1100px, 90vw, calc(100svh - 160px));
   aspect-ratio: 1;
   margin: 65px 0 85px;
 }
@@ -120,7 +122,7 @@ body {
   top: 50%;
   left: 50%;
   z-index: 3;
-  width: min(480px, calc(100vw - 40px));
+  width: min(max(480px, 26vw), 600px, calc(100vw - 40px));
   transform: translate(-50%, -50%);
   text-align: center;
 }
@@ -1038,15 +1040,56 @@ body {
   outline-offset: 2px;
 }
 
-@media (max-width: 640px) {
+/* Touch-sized controls on phones and tablets (touch screens at any width). */
+@media (max-width: 640px), (pointer: coarse) {
   .learning-topbar {
     top: 14px;
     right: 14px;
+    gap: 6px;
+  }
+
+  .learning-icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .learning-lang-switch {
+    height: 40px;
   }
 
   .learning-lang-btn {
-    min-width: 30px;
+    min-width: 36px;
+    height: 34px;
     padding: 0 6px;
+  }
+
+  .learning-credit-info {
+    width: 40px;
+    height: 40px;
+  }
+
+  .learning-credit-github {
+    min-height: 40px;
+  }
+
+  .learning-view-toggle button {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+@media (max-width: 360px) {
+  .learning-lang-btn {
+    min-width: 32px;
+    padding: 0 4px;
+  }
+}
+
+/* Phones turned sideways: less space above and below the globe, so it stays large. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .learning-world {
+    width: min(820px, 90vw, calc(100svh - 96px));
+    margin: 40px 0 56px;
   }
 }
 

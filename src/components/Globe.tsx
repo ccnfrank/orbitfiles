@@ -127,6 +127,8 @@ export function Globe({ items, query, match, selected, onSelect }: Props) {
       const q = queryRef.current;
       const dim = q ? 0.32 : 1;
       const small = size < 500;
+      // Dots and rings grow with large globes so they keep their proportion; phones keep their size.
+      const u = Math.min(1.3, Math.max(1, size / 820));
 
       ctx.clearRect(0, 0, size, size);
 
@@ -157,7 +159,7 @@ export function Globe({ items, query, match, selected, onSelect }: Props) {
         if (depth < 0) continue;
         ctx.fillStyle = `rgba(150, 178, 206, ${(0.08 + depth * 0.3) * dim})`;
         ctx.beginPath();
-        ctx.arc(cx + sx * radius, cx - sy * radius, (small ? 0.8 : 0.9) + depth * 0.5, 0, Math.PI * 2);
+        ctx.arc(cx + sx * radius, cx - sy * radius, ((small ? 0.8 : 0.9) + depth * 0.5) * u, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -176,14 +178,14 @@ export function Globe({ items, query, match, selected, onSelect }: Props) {
         if (!isMatch && k > 0) {
           ctx.fillStyle = `rgba(214, 232, 246, ${0.16 * k * dim})`;
           ctx.beginPath();
-          ctx.arc(h.x, h.y, 4.5 + k * 2, 0, Math.PI * 2);
+          ctx.arc(h.x, h.y, (4.5 + k * 2) * u, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.fillStyle = isMatch
           ? `rgba(164, 236, 222, ${0.6 + k * 0.4})`
           : `rgba(236, 246, 255, ${(0.75 + k * 0.25) * dim * twinkle(seconds, h.index)})`;
         ctx.beginPath();
-        ctx.arc(h.x, h.y, (small ? 2 : 2.2) + k * 1.2 + (isMatch ? 1 : 0), 0, Math.PI * 2);
+        ctx.arc(h.x, h.y, ((small ? 2 : 2.2) + k * 1.2 + (isMatch ? 1 : 0)) * u, 0, Math.PI * 2);
         ctx.fill();
         if (h.depth > FRONT_DEPTH) hits.push(h);
       }
@@ -201,7 +203,7 @@ export function Globe({ items, query, match, selected, onSelect }: Props) {
             ctx.strokeStyle = `rgba(190, 226, 250, ${0.55 * (1 - p) * (1 - p) * (0.4 + k * 0.6) * dim})`;
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.arc(h.x, h.y, PING_MIN + p * PING_MAX, 0, Math.PI * 2);
+            ctx.arc(h.x, h.y, (PING_MIN + p * PING_MAX) * u, 0, Math.PI * 2);
             ctx.stroke();
           }
         }
@@ -220,11 +222,11 @@ export function Globe({ items, query, match, selected, onSelect }: Props) {
         ctx.strokeStyle = "rgba(182, 241, 228, 0.55)";
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(mh.x, mh.y, 9, 0, Math.PI * 2);
+        ctx.arc(mh.x, mh.y, 9 * u, 0, Math.PI * 2);
         ctx.stroke();
         ctx.fillStyle = "#ddfff4";
         ctx.beginPath();
-        ctx.arc(mh.x, mh.y, 3, 0, Math.PI * 2);
+        ctx.arc(mh.x, mh.y, 3 * u, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -241,11 +243,11 @@ export function Globe({ items, query, match, selected, onSelect }: Props) {
         ctx.strokeStyle = "rgba(193, 233, 232, 0.6)";
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(ah.x, ah.y, 7, 0, Math.PI * 2);
+        ctx.arc(ah.x, ah.y, 7 * u, 0, Math.PI * 2);
         ctx.stroke();
         ctx.fillStyle = "#d9f6ef";
         ctx.beginPath();
-        ctx.arc(ah.x, ah.y, 2.5, 0, Math.PI * 2);
+        ctx.arc(ah.x, ah.y, 2.5 * u, 0, Math.PI * 2);
         ctx.fill();
       }
     };
@@ -253,7 +255,8 @@ export function Globe({ items, query, match, selected, onSelect }: Props) {
 
     const resize = () => {
       const width = canvas.getBoundingClientRect().width;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // Up to 3x, so phones with dense screens draw the globe sharp.
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
       view.size = width;
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(width * dpr);
