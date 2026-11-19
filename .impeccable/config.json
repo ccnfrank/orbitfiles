@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-11-19T19:22:04.526Z",
+        "reason": "Typography is intentionally identical to learn-anything.xyz, which loads Inter from Google Fonts; the user asked for an identical type style"
+      }
+    ]
+  }
+}
