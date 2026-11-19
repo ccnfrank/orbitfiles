@@ -7,6 +7,7 @@ import { FolderLoader } from "./components/FolderLoader";
 import { FilePanel } from "./components/FilePanel";
 import { FilePreview } from "./components/FilePreview";
 import { rankByLabel, readDroppedFolders, type FileItem, type Folder, type Loaded, type SearchEntry } from "./lib/folders";
+import { loadDefaultFolder } from "./lib/defaultFolder";
 import { LanguageProvider, useI18n } from "./lib/i18n";
 import { LanguageSwitch } from "./components/LanguageSwitch";
 import { HelpButton, InfoButton } from "./components/AppDialogs";
@@ -99,6 +100,27 @@ function Explorer() {
     setPreview(null);
   }, []);
 
+  // A folder the user loads (picker or drop) replaces the default folder, even if the default is still loading.
+  const userLoaded = useRef(false);
+  const loadByUser = useCallback(
+    (next: Loaded) => {
+      userLoaded.current = true;
+      load(next);
+    },
+    [load],
+  );
+
+  // On start, load the default folder (def_folder/), unless the user has already loaded one.
+  useEffect(() => {
+    let cancelled = false;
+    loadDefaultFolder().then((next) => {
+      if (next && !cancelled && !userLoaded.current) load(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
+
   // Read the files of the selected subfolder.
   useEffect(() => {
     if (!selected) return;
@@ -121,7 +143,7 @@ function Explorer() {
   const onDrop = async (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const next = await readDroppedFolders(e.dataTransfer.items);
-    if (next.folders.length || next.files.length) load(next);
+    if (next.folders.length || next.files.length) loadByUser(next);
   };
 
   const files = selected && listing?.name === selected ? listing.files : null;
@@ -200,7 +222,7 @@ function Explorer() {
               emptyText={emptyText}
               onPick={pick}
               onInputChange={setQuery}
-              action={<FolderLoader count={folders.length} onLoad={load} />}
+              action={<FolderLoader count={folders.length} onLoad={loadByUser} />}
             />
             <div ref={belowRef} className="learning-below">
               {selected && <FilePanel name={selected} files={files} onOpen={openFile} />}

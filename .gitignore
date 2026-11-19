@@ -3,3 +3,4 @@ dist/
 *.log
 .DS_Store
 .impeccable/hook.cache.json
+def_folder/
