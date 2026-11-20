@@ -17,11 +17,11 @@ type Props = {
 type View = "list" | "thumbs";
 
 /** Files inside the selected subfolder, listed under the search field.
- *  The thumbnail view is offered only when the folder contains images, PDFs or audio. */
+ *  The thumbnail view is offered only when the folder contains images or PDFs. Audio alone doesn't count. */
 export function FilePanel({ name, files, onOpen }: Props) {
   const [view, setView] = useState<View>("list");
   const { t, files: fileCount } = useI18n();
-  const hasPreviews = !!files && files.some((f) => THUMB_EXTENSIONS.has(extOf(f.name)) || isAudio(f.name));
+  const hasPreviews = !!files && files.some((f) => THUMB_EXTENSIONS.has(extOf(f.name)));
   const showThumbs = hasPreviews && view === "thumbs";
 
   return (
