@@ -29,8 +29,8 @@ export function FolderSearch({ items, placeholder, emptyText, onPick, onInputCha
   const [value, setValue] = useState("");
   const { t } = useI18n();
   const [view, setView] = useState<"list" | "thumbs">("list");
-  // The grid is offered only when some result is an image, PDF or audio file, as in the file panel.
-  const hasThumbs = items.some((e) => e.item && (THUMB_EXTENSIONS.has(extOf(e.item.name)) || isAudio(e.item.name)));
+  // The grid is offered only when some result is an image or PDF file, as in the file panel. Audio alone doesn't count.
+  const hasThumbs = items.some((e) => e.item && THUMB_EXTENSIONS.has(extOf(e.item.name)));
   const grid = hasThumbs && view === "thumbs";
 
   const handleChange = (next: string) => {
