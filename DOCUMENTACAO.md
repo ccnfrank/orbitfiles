@@ -297,7 +297,7 @@ orbitfiles/
 - **Ao mudar `def_folder/`:** lembre que o conteúdo vai para o build e para o repositório git. Mantenha arquivos grandes sob controle.
 - **Ao mudar a versão:** atualize `version` em `src-tauri/tauri.conf.json` e `src-tauri/Cargo.toml`, e `APP_VERSION` em `src/lib/app-info.ts`.
 - **Ao gerar o app macOS:** rode `npm run tauri build` e confira o `.dmg` gerado em `src-tauri/target/`.
-- **Ao criar uma branch:** parta da `main` atualizada e use nome curto e descritivo.
+- **Ao criar uma branch:** só se o dono do projeto pedir. Nesse caso, parta da `main` atualizada e use nome curto e descritivo.
 - **Antes de abrir PR:** typecheck, build e teste manual com a pasta padrão e com uma pasta externa.
 
 ---
@@ -316,7 +316,8 @@ orbitfiles/
 - **Não quebre o arraste do globo:** o limiar de 4 px separa clique de arraste. Mudanças aí afetam a seleção.
 - **Não remova o `preventDefault` do `onMouseDown`** dos botões de áudio e da barra de ferramentas da busca: sem ele, a lista de resultados fecha ao clicar.
 - **Não coloque `def_folder/` dentro de `src/`.** O plugin do Vite lê exatamente `def_folder/` na raiz.
-- **Não faça commit direto na `main`** e não force push (`--force`) em branch compartilhada.
+- **Não crie branch por conta própria.** Faça as alterações na branch atual (normalmente a `main`), a não ser que o dono do projeto peça uma branch.
+- **Não faça commit nem push sem o pedido do dono do projeto.** E não use force push (`--force`) em branch compartilhada.
 - **Não commite arquivos de segredo** (`.env`, credenciais). Hoje o `.gitignore` cobre `node_modules/`, `dist/`, `*.log`, `.DS_Store`, `src-tauri/target/` e `src-tauri/gen/`.
 - **Não suponha que vídeo tem miniatura ou forma de onda.** Vídeo só é tocado na pré-visualização.
 
@@ -367,13 +368,13 @@ orbitfiles/
 ## 14. Git e fluxo de contribuição
 
 - Branch principal: `main`.
+- **Regra de branches (vale para este projeto):** não crie branch por conta própria. As alterações são feitas na branch atual, normalmente a `main`. Só crie uma branch quando o dono do projeto pedir explicitamente.
 - Commits com mensagem curta no imperativo, em inglês. Exemplos do histórico: "Add Tauri macOS app", "Version the default folder def_folder/".
-- Fluxo sugerido:
-  1. Atualize a `main`.
-  2. Crie uma branch curta (`hide-grid-for-audio-only`, por exemplo).
-  3. Faça as mudanças e rode `npm run typecheck` e `npm run build`.
-  4. Teste manualmente no navegador (com a pasta padrão e com uma pasta externa) e, se mexer na casca, com `npm run tauri dev`.
-  5. Faça commit, envie com `git push -u origin <branch>` e abra o PR contra `main`.
+- Fluxo padrão:
+  1. Confira em qual branch você está (`git branch --show-current`). Se não for a esperada, pergunte antes de mudar.
+  2. Faça as mudanças e rode `npm run typecheck` e `npm run build`.
+  3. Teste manualmente no navegador (com a pasta padrão e com uma pasta externa) e, se mexer na casca, com `npm run tauri dev`.
+  4. Faça commit e push só quando o dono do projeto pedir.
 - Remoto: `https://github.com/ccnfrank/orbitfiles`.
 
 ---
