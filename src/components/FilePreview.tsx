@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { FileText, X } from "lucide-react";
 import type { FileItem } from "../lib/folders";
 import { useI18n } from "../lib/i18n";
+import { ZoomView } from "./ZoomView";
+import type { Size } from "./ZoomView";
+import { PdfView } from "./PdfView";
 
 type Props = {
   item: FileItem;
@@ -54,6 +58,37 @@ function formatBytes(bytes: number): string {
   return `${value.toFixed(value < 10 ? 1 : 0)} ${units[i]}`;
 }
 
+const MIN_WIDTH = 360;
+const MIN_HEIGHT = 240;
+const SCREEN_MARGIN = 48; // the backdrop's padding on both sides
+
+/** The size the user last dragged the popup to. Kept for the session, so the next file opens the same size. */
+let savedSize: Size | null = null;
+
+/** An image in the zoom viewer. It starts fitted to the viewer and keeps its proportions. */
+function ZoomImage({ url, alt }: { url: string; alt: string }) {
+  const [natural, setNatural] = useState<Size | null>(null);
+  const fit = (vw: number, vh: number): Size => {
+    const nw = natural?.w || 4; // some SVGs report no size; a 4:3 box is a reasonable stand-in
+    const nh = natural?.h || 3;
+    const scale = Math.min(vw / nw, vh / nh);
+    return { w: nw * scale, h: nh * scale };
+  };
+  return (
+    <ZoomView fit={fit}>
+      {() => (
+        <img
+          className="learning-zoom-img"
+          src={url}
+          alt={alt}
+          draggable={false}
+          onLoad={(e) => setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+        />
+      )}
+    </ZoomView>
+  );
+}
+
 /** Popup that shows a file from the selected subfolder. Keyed by file name by the parent,
  *  so each file starts with fresh state. */
 export function FilePreview({ item, file, error, onClose }: Props) {
@@ -61,6 +96,38 @@ export function FilePreview({ item, file, error, onClose }: Props) {
   const kind = file ? kindOf(file) : null;
   const [url, setUrl] = useState<string | null>(null);
   const [text, setText] = useState<string | null>(null);
+  const [size, setSizeState] = useState<Size | null>(savedSize);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const resizing = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  const setSize = (next: Size) => {
+    savedSize = next;
+    setSizeState(next);
+  };
+
+  const startResize = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const rect = modalRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    resizing.current = { x: e.clientX, y: e.clientY, w: rect.width, h: rect.height };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+
+  const moveResize = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const start = resizing.current;
+    if (!start) return;
+    // The popup is centered, so each edge moves half of the change. Doubling the pointer movement keeps the grip under the pointer.
+    setSize({
+      w: Math.min(Math.max(start.w + 2 * (e.clientX - start.x), MIN_WIDTH), window.innerWidth - SCREEN_MARGIN),
+      h: Math.min(Math.max(start.h + 2 * (e.clientY - start.y), MIN_HEIGHT), window.innerHeight - SCREEN_MARGIN),
+    });
+  };
+
+  const endResize = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!resizing.current) return;
+    resizing.current = null;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+  };
 
   useEffect(() => {
     if (!file || !kind || kind === "none") return;
@@ -107,12 +174,13 @@ export function FilePreview({ item, file, error, onClose }: Props) {
         </>
       );
     }
+    if (kind === "pdf") return <PdfView file={file} />;
     if (!url) return <p className="learning-preview-empty">{t("loading")}</p>;
-    if (kind === "image") return <img className="learning-preview-media" src={url} alt={item.name} />;
-    if (kind === "pdf") return <iframe className="learning-preview-frame" src={url} title={item.name} />;
+    if (kind === "image") return <ZoomImage url={url} alt={item.name} />;
     if (kind === "video") return <video className="learning-preview-media" src={url} controls />;
     return <audio className="learning-preview-audio" src={url} controls />;
   })();
+  const zoomable = kind === "image" || (kind === "pdf" && !error);
 
   const meta = file
     ? [
@@ -134,10 +202,21 @@ export function FilePreview({ item, file, error, onClose }: Props) {
       }}
     >
       <motion.div
+        ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-label={item.name}
         className="learning-modal"
+        style={
+          size
+            ? {
+                width: `min(${size.w}px, calc(100vw - ${SCREEN_MARGIN}px))`,
+                height: `min(${size.h}px, calc(100vh - ${SCREEN_MARGIN}px))`,
+                maxWidth: "none",
+                maxHeight: "none",
+              }
+            : undefined
+        }
         initial={{ opacity: 0, y: 14, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 8, scale: 0.98 }}
@@ -161,7 +240,20 @@ export function FilePreview({ item, file, error, onClose }: Props) {
             <X size={18} strokeWidth={1.6} aria-hidden="true" />
           </button>
         </header>
-        <div className="learning-modal-body">{body}</div>
+        <div className={zoomable ? "learning-modal-body is-zoom" : "learning-modal-body"}>{body}</div>
+        <div
+          className="learning-modal-grip"
+          title={t("resizeWindow")}
+          aria-hidden="true"
+          onPointerDown={startResize}
+          onPointerMove={moveResize}
+          onPointerUp={endResize}
+          onPointerCancel={endResize}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12">
+            <path d="M11 4 4 11M11 8 8 11" />
+          </svg>
+        </div>
       </motion.div>
     </motion.div>,
     document.body,

@@ -6,7 +6,7 @@
  */
 import type { FileItem } from "./folders";
 import { extractPsdThumbnail } from "./psd";
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { loadPdfjs } from "./pdf";
 
 export const THUMB_EXTENSIONS = new Set(["psd", "png", "tif", "tiff", "jpg", "jpeg", "gif", "pdf"]);
 
@@ -22,8 +22,7 @@ export function extOf(name: string): string {
 type Decoded = { source: CanvasImageSource; width: number; height: number };
 
 async function renderPdf(file: File): Promise<Decoded> {
-  const pdfjs = await import("pdfjs-dist");
-  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+  const pdfjs = await loadPdfjs();
   const task = pdfjs.getDocument({ data: await file.arrayBuffer() });
   try {
     const doc = await task.promise;

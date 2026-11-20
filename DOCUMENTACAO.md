@@ -65,7 +65,7 @@ Não há testes automatizados (não existe script de teste, nem Vitest, nem Jest
 | Animação | motion (Framer Motion) | ^14.14.0 | Modais e transições |
 | Busca | cmdk | ^1.1.1 | Lista de resultados da busca (`Command`) |
 | Ícones | lucide-react | ^1.76.0 | Todos os ícones da UI |
-| PDF | pdfjs-dist | ^6.5.438 | Miniatura da página 1 de PDFs |
+| PDF | pdfjs-dist | ^6.5.438 | Miniatura da página 1 e visualização de PDFs (`src/lib/pdf.ts`, `src/components/PdfView.tsx`) |
 | TIFF | utif | ^3.1.0 | Decodificação de TIFF para miniatura |
 | Desktop | Tauri 2 (Rust) | `@tauri-apps/cli` ^2.12.6, `src-tauri/` | Empacota o app como app macOS |
 
@@ -131,12 +131,13 @@ Consequência: nunca leia o conteúdo de todos os arquivos de uma vez. Isso é d
 ### 4.6 Painel de arquivos e pré-visualização
 
 - `FilePanel` lista os arquivos da pasta selecionada. Fecha ao clicar fora (listener de `pointerdown` em fase de captura em `App.tsx`).
-- `FilePreview` é um modal em portal (`document.body`). Escolhe o tipo pelo MIME e pela extensão: imagem, PDF (iframe), vídeo, áudio, texto (primeiros 200 KB) ou "sem pré-visualização". Fecha com Escape, botão X ou clique no fundo.
+- `FilePreview` é um modal em portal (`document.body`). Escolhe o tipo pelo MIME e pela extensão: imagem, PDF, vídeo, áudio, texto (primeiros 200 KB) ou "sem pré-visualização". Fecha com Escape, botão X ou clique no fundo. A janela pode ser redimensionada pelo canto inferior direito, e o tamanho escolhido vale até o fim da sessão.
+- Imagens e PDFs usam `ZoomView` (`src/components/ZoomView.tsx`): roda do mouse dá zoom no ponto do cursor, arrastar com o botão pressionado move o conteúdo, duplo clique ou tecla 0 volta ao tamanho original. PDFs são desenhados em canvas pelo pdf.js (`PdfView.tsx`), página a página, só quando estão perto da área visível. Por isso o PDF não tem seleção de texto nem busca do visualizador nativo.
 - URLs de objeto (`URL.createObjectURL`) são revogadas quando o modal fecha.
 
 ### 4.7 Miniaturas e áudio
 
-- `src/lib/thumbnails.ts`: JPEG de até 320 px no maior lado, qualidade 0,72, fundo `#0b1015`. PSD usa a miniatura embutida (`src/lib/psd.ts`, lê só os primeiros 8 MB). TIFF usa `utif`. PDF renderiza a página 1 com pdf.js. Resto: `createImageBitmap`. Cache por arquivo em `WeakMap`.
+- `src/lib/thumbnails.ts`: JPEG de até 320 px no maior lado, qualidade 0,72, fundo `#0b1015`. PSD usa a miniatura embutida (`src/lib/psd.ts`, lê só os primeiros 8 MB). TIFF usa `utif`. PDF renderiza a página 1 com pdf.js, carregado por `src/lib/pdf.ts`. Resto: `createImageBitmap`. Cache por arquivo em `WeakMap`.
 - `THUMB_EXTENSIONS` (psd, png, tif, tiff, jpg, jpeg, gif, pdf) define quais arquivos têm miniatura de imagem.
 - `src/lib/waveform.ts`: forma de onda com 48 barras, decodificada com Web Audio. Arquivos acima de 100 MB não são decodificados.
 - `src/lib/audio.ts`: **um único** `Audio` compartilhado. Tocar outro arquivo para o atual. Componentes assinam o estado com `useSyncExternalStore`.
@@ -204,6 +205,8 @@ Não há banco de dados, nem persistência além do idioma no `localStorage`. Ao
 
 ### 6.5 Pré-visualização
 - Imagens, PDFs, vídeos, áudios e textos. Texto mostra só os primeiros 200 KB, com aviso.
+- Imagens e PDFs: zoom de 100% a 800% com a roda do mouse, arrastar para mover, duplo clique ou tecla 0 para voltar. Os botões − / + da barra inferior fazem o mesmo.
+- A janela pode ser redimensionada pela alça no canto inferior direito.
 - Metadados: tamanho, tipo MIME ou extensão, data de modificação.
 - Erro de leitura mostra "Este arquivo não pôde ser aberto."
 
@@ -332,7 +335,7 @@ orbitfiles/
 - **Pasta padrão no build:** o `generateBundle` copia `def_folder/` inteira para `dist/def-folder/`. Ou seja, o build (e o app macOS) carrega esses arquivos mesmo offline.
 - **Servidor de desenvolvimento:** o middleware serve `def_folder/` ao vivo. Arquivo novo aparece sem reiniciar, mas o manifesto (`index.json`) é gerado a cada requisição; pastas enormes deixam o carregamento lento.
 - **Proteção de caminho:** `serveDefaultFolder` recusa caminhos fora de `def_folder/` (checagem com `path.resolve`). Não remova essa checagem.
-- **PDF com pdf.js:** o worker é carregado com `?url` do Vite. Se mudar a versão de `pdfjs-dist`, confira o caminho do worker em `thumbnails.ts`.
+- **PDF com pdf.js:** o worker é carregado com `?url` do Vite em `src/lib/pdf.ts`, e é o único lugar que configura o worker. Miniaturas e a visualização usam esse mesmo carregador. Se mudar a versão de `pdfjs-dist`, confira o caminho do worker ali.
 - **Miniatura PSD:** só lê os primeiros 8 MB. PSDs sem miniatura embutida caem no placeholder com a extensão.
 - **Estado do globo e da busca:** `Globe` recebe `query` e `match` de `App.tsx`. Se mudar a busca, confira o escurecimento dos pontos e o giro para o melhor resultado.
 - **Limpeza de URL de objeto:** `FilePreview` revoga a URL no cleanup do efeito. Em `audio.ts`, a URL anterior é revogada ao tocar outro arquivo. Já as miniaturas de `thumbnails.ts` criam uma URL por arquivo e **nunca a revogam**: ela fica no cache até o fim da sessão. Se isso virar problema em pastas enormes, a correção é revogar ao descartar do cache.
